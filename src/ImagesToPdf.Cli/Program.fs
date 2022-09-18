@@ -7,6 +7,8 @@ open QuestPDF.Helpers
 open QuestPDF.Infrastructure
 open QuestPDF.Fluent
 open SixLabors.ImageSharp;
+open SixLabors.ImageSharp.Formats
+open SixLabors.ImageSharp.Formats.Png
 open SixLabors.ImageSharp.Processing;
 
 let resize (size: QuestPDF.Infrastructure.Size) (ctx: IImageProcessingContext) : unit =
@@ -16,27 +18,23 @@ let resize (size: QuestPDF.Infrastructure.Size) (ctx: IImageProcessingContext) :
 let loadImage (path) (size: QuestPDF.Infrastructure.Size) : byte array =
     use image = Image.Load(path = path)
     image.Mutate(resize(size))
-    Array.empty<byte>
-    
-
-let loadImages (path:string) (page: PageDescriptor) =
-    let files = Directory.GetFiles(path, "*.png")
-    for file in files do
-        let f = Func<QuestPDF.Infrastructure.Size, byte array>(loadImage(file))
-        page.Content().Image(f)
-    ()
-
-    
+    use memory = new MemoryStream()
+    image.Save(memory, PngFormat.Instance)
+    memory.ToArray()
 
 let createPage (path: string) (page: PageDescriptor): unit =
     page.Size(PageSizes.A4)
     page.Margin(2f, Unit.Centimetre);
     page.PageColor(Colors.White);
-    loadImages path page
+    page.Content().Image(loadImage(path))
     ()
 
-let createContainer (path:string) (ct:IDocumentContainer):unit = 
-    ct.Page(createPage(path))
+let createContainer (path:string) (ct:IDocumentContainer):unit =
+    let files = Directory.GetFiles(path, "*.jpg")
+    for file in files do
+        ct.Page(createPage(file))
     ()
 
-Document.Create(createContainer("./"))
+let document = Document.Create(createContainer("./"))
+
+document.GeneratePdf("test.pdf")
