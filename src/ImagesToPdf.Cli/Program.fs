@@ -29,12 +29,28 @@ let createPage (path: string) (page: PageDescriptor): unit =
     page.Content().Image(loadImage(path))
     ()
 
-let createContainer (path:string) (ct:IDocumentContainer):unit =
-    let files = Directory.GetFiles(path, "*.jpg")
+let createContainer (dir: string) (ct:IDocumentContainer):unit =
+    let files = Directory.GetFiles(dir, "*.jpg")
     for file in files do
         ct.Page(createPage(file))
     ()
 
-let document = Document.Create(createContainer("./"))
+let getDir(args: string[]): string =
+    if args.Length = 1 then
+        args[0]
+    else
+        System.Environment.CurrentDirectory
 
-document.GeneratePdf("test.pdf")
+let getPdfName (args: string[]): string =
+    if args.Length = 2 then
+        args[1]
+    else
+        "test.pdf"
+
+let args = Environment.GetCommandLineArgs()[1..]
+
+let dir = getDir(args)
+
+let document = Document.Create(createContainer(dir))
+
+document.GeneratePdf(getPdfName(args))
